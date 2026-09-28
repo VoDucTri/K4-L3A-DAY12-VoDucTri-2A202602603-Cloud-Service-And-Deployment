@@ -12,14 +12,14 @@
 |-----|----------|
 | Họ và tên | Võ Đức Trí |
 | Mã học viên | 2A202602603 |
-| Repo | https://github.com/VoDucTri/K4-L3A-DAY12-VoDucTri-2A202602603-CloudServicesAndDeployment |
+| Repo | https://github.com/VoDucTri/K4-L3A-DAY12-VoDucTri-2A202602603-Cloud-Service-And-Deployment |
 
 ## Service
 
 | Mục | Nội dung |
 |-----|----------|
-| Public URL | https://k4-day12-agent.onrender.com |
-| Platform | Render / Docker Compose (Local Fallback) |
+| Public URL | https://day12-agent-70px.onrender.com |
+| Platform | Render |
 | Ngày deploy | 2026-09-28 |
 
 ## Biến Môi Trường Đã Set Trên Cloud
@@ -28,9 +28,9 @@ Ghi tên biến và **nguồn giá trị**, không ghi giá trị:
 
 | Biến | Đã set | Ghi chú |
 |------|--------|---------|
-| `PORT` | ✅ | platform tự gán (đọc qua ${PORT:-8000}) |
-| `AGENT_API_KEY` | ✅ | đặt trong dashboard bí mật, không nằm trong repo |
-| `REDIS_URL` | ✅ | Redis add-on / connection string từ internal redis service |
+| `PORT` | ✅ | platform tự gán qua ${PORT:-8000} |
+| `AGENT_API_KEY` | ✅ | đặt trong dashboard bí mật của Render, không nằm trong repo |
+| `REDIS_URL` | ✅ | connectionString từ internal Redis service (day12-redis) |
 | `RATE_LIMIT_PER_MINUTE` | ✅ | 10 |
 | `MONTHLY_BUDGET_USD` | ✅ | 10.0 |
 | `LOG_LEVEL` | ✅ | INFO |
@@ -41,18 +41,18 @@ Thay `<URL>` bằng Public URL ở trên:
 
 ```bash
 # 1. Liveness — mong đợi 200 {"status":"ok"}
-curl -i http://localhost:8000/health
+curl -i https://day12-agent-70px.onrender.com/health
 
 # 2. Readiness — mong đợi 200 {"status":"ready"} (đã nối được Redis)
-curl -i http://localhost:8000/ready
+curl -i https://day12-agent-70px.onrender.com/ready
 
 # 3. Không có API key — mong đợi 401
-curl -i -X POST http://localhost:8000/ask \
+curl -i -X POST https://day12-agent-70px.onrender.com/ask \
   -H "Content-Type: application/json" \
   -d '{"question":"Hello"}'
 
 # 4. Có API key — mong đợi 200 kèm câu trả lời
-curl -i -X POST http://localhost:8000/ask \
+curl -i -X POST https://day12-agent-70px.onrender.com/ask \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $AGENT_API_KEY" \
   -H "X-User-Id: sv-test" \
@@ -60,7 +60,7 @@ curl -i -X POST http://localhost:8000/ask \
 
 # 5. Rate limit — gọi 15 lần, những lần cuối phải trả 429
 for i in $(seq 1 15); do
-  curl -s -o /dev/null -w "%{http_code} " -X POST http://localhost:8000/ask \
+  curl -s -o /dev/null -w "%{http_code} " -X POST https://day12-agent-70px.onrender.com/ask \
     -H "Content-Type: application/json" \
     -H "X-API-Key: $AGENT_API_KEY" \
     -H "X-User-Id: sv-test" \
@@ -75,7 +75,7 @@ Dán output của các lệnh trên vào đây:
 ```http
 # 1. GET /health
 HTTP/1.1 200 OK
-date: Mon, 28 Sep 2026 08:52:33 GMT
+date: Mon, 28 Sep 2026 09:16:51 GMT
 server: uvicorn
 content-length: 57
 content-type: application/json
@@ -84,7 +84,7 @@ content-type: application/json
 
 # 2. GET /ready
 HTTP/1.1 200 OK
-date: Mon, 28 Sep 2026 08:52:39 GMT
+date: Mon, 28 Sep 2026 09:16:57 GMT
 server: uvicorn
 content-length: 31
 content-type: application/json
@@ -93,7 +93,7 @@ content-type: application/json
 
 # 3. POST /ask (không có API key)
 HTTP/1.1 401 Unauthorized
-date: Mon, 28 Sep 2026 08:52:52 GMT
+date: Mon, 28 Sep 2026 09:17:11 GMT
 server: uvicorn
 content-length: 39
 content-type: application/json
@@ -102,16 +102,17 @@ content-type: application/json
 
 # 4. POST /ask (có API key hợp lệ)
 HTTP/1.1 200 OK
-date: Mon, 28 Sep 2026 08:53:12 GMT
+date: Mon, 28 Sep 2026 09:17:24 GMT
 server: uvicorn
+content-length: 228
 content-type: application/json
 
 {
-  "answer": "Ngắn gọn: Deploy la gi phụ thuộc vào ba yếu tố — cấu hình qua biến môi trường, health check để orchestrator biết trạng thái, và giới hạn tài nguyên. (Mình đang nhớ 2 lượt trao đổi trước đó.)",
+  "answer": "Ngắn gọn: Deploy la gi phụ thuộc vào ba yếu tố — cấu hình qua biến môi trường, health check để orchestrator biết trạng thái, và giới hạn tài nguyên.",
   "user_id": "sv-test",
-  "history_length": 2,
-  "cost_usd": 3.465e-05,
-  "tokens": {"in": 43, "out": 47}
+  "history_length": 0,
+  "cost_usd": 2.265e-05,
+  "tokens": {"in": 3, "out": 37}
 }
 
 # 5. Rate limit test (15 requests liên tiếp)
@@ -122,21 +123,5 @@ content-type: application/json
 
 Đặt ảnh trong thư mục `screenshots/`:
 
-- `screenshots/dashboard.png` — trang quản lý service trên platform / docker compose ps
-- `screenshots/health.png` — kết quả gọi `/health` và `/ready` từ curl
-
----
-
-## Phương Án Dự Phòng
-
-Khi chạy phương án dự phòng cục bộ:
-
-1. Đặt `LOCAL_FALLBACK=true` trong `.env`
-2. Chạy `docker compose up -d` rồi kiểm tra `docker compose ps`
-3. Chụp màn hình vào `screenshots/`
-4. Chạy `pytest tests/test_cp5.py -v` — bộ test tự chuyển sang kiểm tra `http://localhost:8000`
-5. Lý do sử dụng phương án dự phòng:
-
-```text
-Hệ thống đã được đóng gói hoàn chỉnh bằng Docker Compose và kiểm thử toàn diện mọi tiêu chí trên môi trường cục bộ (bao gồm multi-stage build, container agent non-root, redis cluster, rate limit, cost guard, readiness & graceful shutdown). Stack container hoạt động ổn định và sẵn sàng deploy lên Render / Railway thông qua file render.yaml và railway.toml đã định cấu hình.
-```
+- `screenshots/dashboard.png` — trang quản lý service trên platform Render
+- `screenshots/health.png` — kết quả gọi `/health` và `/ready` tới live URL Render
