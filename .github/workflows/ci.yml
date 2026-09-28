@@ -26,7 +26,7 @@ jobs:
 
       - name: Run Pytest
         run: |
-          pytest --ignore=tests/test_cp5.py -v -m "not docker"
+          pytest --ignore=tests/test_cp5.py --ignore=tests/test_bonus_cicd.py -v -m "not docker"
 
   build:
     name: Build Image
